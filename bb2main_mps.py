@@ -116,7 +116,7 @@ def sensor_thread(device, rateQ):
                                 )
                                 timestamps = [d['timestamp_s'] for d in bbeltDataDeck]
 
-                                logging.info("Processing breathing rate data now...")
+                                logging.debug("Processing breathing rate data now...")
                                 breathing_rate = BreathRate(beltData[:, 0])
 
                                 dataLock.acquire()
@@ -124,13 +124,13 @@ def sensor_thread(device, rateQ):
                                 dataLock.release()
 
                                 for i, row in enumerate(beltData):
-                                    logging.info("Writing sensor data now...")
+                                    logging.debug("Writing sensor data now...")
                                     sensor_writer.writerow([timestamps[i]] + list(row))
 
                                 sensor_file.flush()
                                 os.fsync(sensor_file.fileno())
 
-                                logging.info("Writing breathing rate data now...")
+                                logging.debug("Writing breathing rate data now...")
                                 rate_writer.writerow([timestamps[-1], breathing_rate])
                                 rate_file.flush()
                                 os.fsync(rate_file.fileno())
@@ -156,7 +156,7 @@ def sensor_thread(device, rateQ):
             except:
                 pass
 
-            logging.info(f"Data collection stopped for device {name}.")
+            logging.debug(f"Data collection stopped for device {name}.")
 
 if __name__ == "__main__":
     # Register signal handlers for graceful shutdown
