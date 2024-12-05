@@ -1,29 +1,40 @@
+'''
+Created on Dec 25, 2018
+
+'''
+import asyncio
+import time
+import collections
+import subprocess
 import os
 import csv
-import time
-import signal
+import math
+import logging
+import datetime
 import sys
+import signal
+
+import multiprocessing
 import threading
 import queue
-import collections
 import numpy as np
-import logging
 from breathingBeltHandlerHacked import GoDirectDevices
 from BeltBreathRate import BreathRate
+from multiprocessing.connection import Listener
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 DIRECTORY_PATH = r"./data/belt" + time.strftime(u"%Y%m%d") + "/"
 
+# Global variable for graceful termination
 TERMINATE = False
 threads = []
 devices = None
 rateQ = None
 
 def graceful_exit(signum, frame):
-    # 信号处理函数，用于接收到信号后优雅退出
     global TERMINATE
-    logging.info("Received termination signal, will attempt graceful shutdown...")
+    logging.info("Received termination signal, attempting graceful shutdown...")
     TERMINATE = True
 
 def sensor_thread(device, rateQ):
@@ -49,7 +60,7 @@ def sensor_thread(device, rateQ):
         sensor_writer = csv.writer(sensor_file)
         rate_writer = csv.writer(rate_file)
 
-        # 写入表头
+        # Write headers
         sensor_writer.writerow(["Timestamp_s", "Force", "Respiration Rate", "Step Rate", "Steps"])
         rate_writer.writerow(["Timestamp_s", "Breathing Rate"])
         sensor_file.flush()
@@ -59,6 +70,7 @@ def sensor_thread(device, rateQ):
 
         t = threading.current_thread()
         try:
+            # Start the device if not terminating
             if not TERMINATE:
                 device.start(period=100)
 
@@ -104,7 +116,7 @@ def sensor_thread(device, rateQ):
                                 )
                                 timestamps = [d['timestamp_s'] for d in bbeltDataDeck]
 
-                                logging.debug("Processing breathing rate data now...")
+                                logging.info("Processing breathing rate data now...")
                                 breathing_rate = BreathRate(beltData[:, 0])
 
                                 dataLock.acquire()
@@ -112,13 +124,13 @@ def sensor_thread(device, rateQ):
                                 dataLock.release()
 
                                 for i, row in enumerate(beltData):
-                                    logging.debug("Writing sensor data now...")
+                                    logging.info("Writing sensor data now...")
                                     sensor_writer.writerow([timestamps[i]] + list(row))
 
                                 sensor_file.flush()
                                 os.fsync(sensor_file.fileno())
 
-                                logging.debug("Writing breathing rate data now...")
+                                logging.info("Writing breathing rate data now...")
                                 rate_writer.writerow([timestamps[-1], breathing_rate])
                                 rate_file.flush()
                                 os.fsync(rate_file.fileno())
@@ -137,8 +149,7 @@ def sensor_thread(device, rateQ):
             logging.error(f"Error in sensor_thread for device {name}: {e}")
         finally:
             stopEvent.set()
-            # 在finally中确保设备正常停止和关闭
-            # 此时TERMINATE已设置，不会再有额外操作对设备进行I/O
+            # Ensure the device is properly stopped and closed in the finally block
             try:
                 device.stop()
                 device.close()
@@ -148,6 +159,7 @@ def sensor_thread(device, rateQ):
             logging.info(f"Data collection stopped for device {name}.")
 
 if __name__ == "__main__":
+    # Register signal handlers for graceful shutdown
     signal.signal(signal.SIGINT, graceful_exit)
     signal.signal(signal.SIGTERM, graceful_exit)
 
@@ -176,15 +188,15 @@ if __name__ == "__main__":
         logging.info("KeyboardInterrupt received in main thread, setting TERMINATE=True...")
         TERMINATE = True
     finally:
-        # 通知线程停止
+        # Notify threads to stop
         for t in threads:
             t.do_run = False
 
-        # 等待线程结束
+        # Wait for all threads to finish
         for t in threads:
             t.join()
 
-        # 确保设备关闭
+        # Ensure all devices are stopped and closed
         if devices and devices.device_list:
             for device in devices.device_list:
                 try:
