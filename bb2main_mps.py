@@ -22,7 +22,7 @@ from breathingBeltHandlerHacked import GoDirectDevices
 from BeltBreathRate import BreathRate
 from multiprocessing.connection import Listener
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 DIRECTORY_PATH = r"./data/belt" + time.strftime(u"%Y%m%d") + "/"
 
