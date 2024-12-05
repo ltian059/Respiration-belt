@@ -23,14 +23,22 @@ import queue
 from io import open
 class GoDirectDevices():
     def __init__(self):
-        self.devices = godirect.list_devices()
+        self.device_list = []
+        all_devices = godirect.list_devices()
+        # self.devices = godirect.list_devices()
         # self.devices = godirect.get_device(threshold=-100)
         self.device_list = []
-        for device in self.devices:
-            device.open(auto_start=False)
-            logging.info(f'Found and opened device: {device.name}')
-            self.device_list.append(device)
-        # print('found devices: {0}'.format(godirect.list_devices()))
+        for device in all_devices:
+            try:
+                # Try to open the device
+                device.open(auto_start=False)
+                logging.info(f'Found and opened device: {device.name}')
+                self.device_list.append(device)
+            except Exception as e:
+                # If we fail to open the device (e.g. because it's already connected elsewhere), skip it
+                logging.warning(f"Failed to open device {device.name}: {e}")
+                # device could be ignored at this point, not appended to self.device_list
+
 
     def __del__(self):
         for device in self.devices:
