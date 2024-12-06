@@ -1,1 +1,5 @@
 data/
+*.log
+belt_data/
+*.zip
+build/
