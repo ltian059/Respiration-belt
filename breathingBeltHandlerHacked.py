@@ -4,51 +4,9 @@ Created on Dec 25, 2018
 @author: rajitha
 '''
 import logging
-
+import threading
 # !pip install vernierpygatt
-from godirect import GoDirect
-USE_BLE = True
 import time
-godirect = GoDirect(use_ble=USE_BLE, use_usb=not USE_BLE)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-import time
-import threading
-import queue
-import csv
-import sys
-import threading
-import queue
-
-from io import open
-class GoDirectDevices():
-    def __init__(self):
-        self.device_list = []
-        all_devices = godirect.list_devices()
-        # self.devices = godirect.list_devices()
-        # self.devices = godirect.get_device(threshold=-100)
-        self.device_list = []
-        for device in all_devices:
-            try:
-                # Try to open the device
-                device.open(auto_start=False)
-                logging.info(f'Found and opened device: {device.name}')
-                self.device_list.append(device)
-            except Exception as e:
-                # If we fail to open the device (e.g. because it's already connected elsewhere), skip it
-                logging.warning(f"Failed to open device {device.name}: {e}")
-                # device could be ignored at this point, not appended to self.device_list
-
-
-    def __del__(self):
-        for device in self.devices:
-            try:
-                device.stop()
-                device.close()
-                logging.info(f'Device {device.name} stopped and closed.')
-            except Exception as e:
-                logging.error(f'Error closing device {device.name}: {e}')
-        godirect.quit()
 
 
 class CollectionThreadGDXRBDummy(threading.Thread):

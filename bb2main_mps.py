@@ -1,42 +1,63 @@
 '''
 Created on Dec 25, 2018
-
 '''
-import asyncio
-import time
 import collections
-import subprocess
-import os
 import csv
-import math
 import logging
-import datetime
-import sys
-import signal
-
-import multiprocessing
-import threading
+import os
 import queue
+import signal
+import sys
+import threading
+import time
+
 import numpy as np
-from breathingBeltHandlerHacked import GoDirectDevices
+from godirect import GoDirect
+
 from BeltBreathRate import BreathRate
-from multiprocessing.connection import Listener
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
 DIRECTORY_PATH = r"./data/belt" + time.strftime(u"%Y%m%d") + "/"
+USE_BLE = True
 
 # Global variable for graceful termination
 TERMINATE = False
 threads = []
 devices = None
 rateQ = None
-
+godirect = GoDirect(use_ble=USE_BLE, use_usb=not USE_BLE)
 def graceful_exit(signum, frame):
     global TERMINATE
     logging.info("Received termination signal, attempting graceful shutdown...")
     TERMINATE = True
+class GoDirectDevices():
+    def __init__(self):
+        self.device_list = []
+        all_devices = godirect.list_devices()
+        # self.devices = godirect.list_devices()
+        # self.devices = godirect.get_device(threshold=-100)
+        self.device_list = []
+        for device in all_devices:
+            try:
+                # Try to open the device
+                device.open(auto_start=False)
+                logging.info(f'Found and opened device: {device.name}')
+                self.device_list.append(device)
+            except Exception as e:
+                # If we fail to open the device (e.g. because it's already connected elsewhere), skip it
+                logging.warning(f"Failed to open device {device.name}: {e}")
+                # device could be ignored at this point, not appended to self.device_list
 
+
+    def __del__(self):
+        for device in self.devices:
+            try:
+                device.stop()
+                device.close()
+                logging.info(f'Device {device.name} stopped and closed.')
+            except Exception as e:
+                logging.error(f'Error closing device {device.name}: {e}')
+        godirect.quit()
 def sensor_thread(device, rateQ):
     global TERMINATE
     name = device.name
