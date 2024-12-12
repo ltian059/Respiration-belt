@@ -1,6 +1,0 @@
-{
-    "use_ble": true,
-    "directory_path": "./data/belt_",
-    "logging_level": "info",
-    "period": 100
-}

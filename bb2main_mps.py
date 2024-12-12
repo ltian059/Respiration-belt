@@ -58,10 +58,11 @@ def load_config(config_path='belt_config.json'):
     default_config = {
         "use_ble": True,
         "directory_path": "./data/belt_",
-        "sensor_data_file_name": "sensor_data_",
-        "breath_rate_file_name": "breath_data_",
+        "sensor_data_file_name": "sensor_data",
+        "breath_rate_file_name": "breath_data",
         "file_name_timestamp": True,
         "logging_level": "info",
+        "file_name_include_device_name": True,
         "period": 100
     }
     try:
@@ -129,7 +130,7 @@ class GoDirectDevices:
         # Quit the GoDirect instance
         self.godirect.quit()
 
-def sensor_thread(device, rateQ, terminate_event, directory_path, period, sensor_data_file_name, breath_rate_file_name, file_name_timestamp):
+def sensor_thread(device, rateQ, terminate_event, directory_path, period, sensor_data_file_name, breath_rate_file_name, file_name_timestamp, include_device_name):
     """Thread function to read sensor data from a device, write to CSV,
        compute breathing rate, and put results in a queue."""
     name = device.name
@@ -137,12 +138,16 @@ def sensor_thread(device, rateQ, terminate_event, directory_path, period, sensor
 
     device_dir = os.path.join(directory_path, name)
     os.makedirs(device_dir, exist_ok=True)
+    if include_device_name:
+        sensor_data_csv_path = sensor_data_file_name + '_' + name
+        breathing_rate_csv_path = breath_rate_file_name + '_' + name
     if file_name_timestamp:
-        sensor_data_csv_path = os.path.join(device_dir, sensor_data_file_name + time.strftime(u"%Y%m%d%H%M%S") + '.csv')
-        breathing_rate_csv_path = os.path.join(device_dir, breath_rate_file_name + time.strftime(u"%Y%m%d%H%M%S") + '.csv')
-    else:
-        sensor_data_csv_path = os.path.join(device_dir, sensor_data_file_name + '.csv')
-        breathing_rate_csv_path = os.path.join(device_dir, breath_rate_file_name + '.csv')
+        sensor_data_csv_path = sensor_data_file_name + '_' + time.strftime(u"%Y%m%d%H%M%S")
+        breathing_rate_csv_path = breath_rate_file_name + '_' + time.strftime(u"%Y%m%d%H%M%S")
+
+
+    sensor_data_csv_path = os.path.join(device_dir, sensor_data_csv_path + '.csv')
+    breathing_rate_csv_path = os.path.join(device_dir, breathing_rate_csv_path + '.csv')
 
 
     logging.info(f"Sensor CSV will be saved at: {os.path.abspath(sensor_data_csv_path)}")
@@ -269,6 +274,7 @@ def run_main():
     DIRECTORY_PATH = DIRECTORY_PATH_BASE + time.strftime("%Y%m%d") + "/"
     SENSOR_DATA_FILE_NAME = config.get("sensor_data_file_name", "sensor_data_")
     BREATH_RATE_FILE_NAME = config.get("breath_rate_file_name", "breath_rate_")
+    INCLUDE_DEVICE_NAME = config.get("file_name_include_device_name", True)
     FILE_NAME_TIMESTAMP = config.get("file_name_timestamp", True)
     PERIOD = config.get("period", 100)
 
@@ -289,7 +295,7 @@ def run_main():
 
         for device in devices.device_list:
             t = threading.Thread(target=sensor_thread, args=(device, rateQ, terminate_event, DIRECTORY_PATH,
-                                                             PERIOD,SENSOR_DATA_FILE_NAME,BREATH_RATE_FILE_NAME, FILE_NAME_TIMESTAMP))
+                                                             PERIOD,SENSOR_DATA_FILE_NAME,BREATH_RATE_FILE_NAME, FILE_NAME_TIMESTAMP,INCLUDE_DEVICE_NAME))
             t.do_run = True
             t.start()
             threads.append(t)
