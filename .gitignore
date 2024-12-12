@@ -3,3 +3,4 @@ data/
 belt_data/
 *.zip
 build/
+dist/
